@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Session View</title>
+    <style>
+        table.board { border-collapse: collapse; }
+        table.board td { border: 1px solid #333; width: 48px; height: 48px; text-align: center; font-size: 24px; }
+        .status { margin: 1em 0; }
+        .moves { margin-top: 1em; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <p><a href="/">Back to home</a></p>
+    <h1>Session <span id="sessionId" th:text="${sessionId}">...</span></h1>
+    <p id="error" style="color: red; display: none;"></p>
+    <p th:if="${error}" style="color: red;" th:text="${error}">Load error</p>
+    <div class="status">
+        <strong>Simulation:</strong> <span id="simStatus" th:text="${session?.simulationStatus}">-</span>
+        <strong>Game:</strong> <span id="gameStatus" th:text="${session?.game?.status}">-</span>
+    </div>
+    <table class="board" id="board">
+        <tr><td id="c00"></td><td id="c01"></td><td id="c02"></td></tr>
+        <tr><td id="c10"></td><td id="c11"></td><td id="c12"></td></tr>
+        <tr><td id="c20"></td><td id="c21"></td><td id="c22"></td></tr>
+    </table>
+    <div class="moves">
+        <strong>Move history</strong>
+        <ul id="moves"></ul>
+    </div>
+    <script th:inline="javascript">
+        const sessionId = /*[[${sessionId}]]*/ '';
+        const pollIntervalMs = 500;
+
+        function renderBoard(rows) {
+            if (!rows) return;
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const cell = document.getElementById('c' + r + c);
+                    cell.textContent = (rows[r] && rows[r][c]) ? rows[r][c] : '';
+                }
+            }
+        }
+
+        function renderMoves(moves) {
+            const ul = document.getElementById('moves');
+            ul.innerHTML = '';
+            if (moves) {
+                moves.forEach(m => {
+                    const li = document.createElement('li');
+                    li.textContent = (m.player || '') + ' at (' + (m.row ?? '') + ',' + (m.col ?? '') + ')';
+                    ul.appendChild(li);
+                });
+            }
+        }
+
+        function poll() {
+            fetch('/sessions/' + sessionId + '/state')
+                .then(r => {
+                    if (!r.ok) throw new Error('Request failed');
+                    return r.json();
+                })
+                .then(data => {
+                    document.getElementById('error').style.display = 'none';
+                    document.getElementById('simStatus').textContent = data.simulationStatus || '-';
+                    if (data.game) {
+                        var status = data.game.status || '-';
+                        var winner = data.game.winner;
+                        document.getElementById('gameStatus').textContent = (status === 'WIN' && winner) ? ('WIN (' + winner + ')') : status;
+                        renderBoard(data.game.board && data.game.board.rows);
+                    }
+                    renderMoves(data.moves);
+                    if (data.simulationStatus === 'FINISHED' || data.simulationStatus === 'FAILED') {
+                        clearInterval(intervalId);
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('error').textContent = 'Could not load session state. Retrying...';
+                    document.getElementById('error').style.display = 'block';
+                });
+        }
+
+        poll();
+        const intervalId = setInterval(poll, pollIntervalMs);
+    </script>
+</body>
+</html>
