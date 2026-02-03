@@ -49,6 +49,10 @@ Distributed Tic Tac Toe with three services: **Game Engine**, **Game Session**, 
 | Session | 8082 | `ENGINE_BASE_URL` (default http://localhost:8081), `KAFKA_BOOTSTRAP_SERVERS` (default localhost:9092) |
 | Engine | 8081 | `KAFKA_BOOTSTRAP_SERVERS` (default localhost:9092) |
 
+## App Preview
+
+![App Preview](docs/screen-record-flamingo.gif)
+
 ## Module layout
 
 - **tictactoe-contracts** – DTOs, enums, `GameUpdatedEvent`, error codes
